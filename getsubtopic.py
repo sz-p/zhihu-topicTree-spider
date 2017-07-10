@@ -21,7 +21,7 @@ class Gct():
                 response = urllib2.urlopen(request,data=None,timeout=config.timeout)
                 subtopic_json = json.loads(response.read(),encoding="utf-8")
                 return subtopic_json
-            except urllib2.URLError, e:
+            except Exception, e:
                 if hasattr(e,"reason"):
                     print u"错误原因",e
                 retry_time -= 1

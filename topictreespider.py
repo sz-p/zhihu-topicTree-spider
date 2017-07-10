@@ -52,14 +52,20 @@ def get_parents_str(htmlValue):
         return d('.parent-topic')
 # 获取父话题名称
 def get_parents_title(parents_str):
+    _list = []
     d = pq(parents_str)
     if(d):
-        return d('a').html().decode('utf8').strip()
+        for i in range(0,len(d('a'))):
+            _list.append(d('a').eq(i).html().encode('latin1').decode('utf8').strip())
+        return _list
 # 获取父话题ID
 def get_parents_id(parents_str):
+    _list = []
     d = pq(parents_str)
     if(d):
-        return d('a').attr('data-token')
+        for i in range(0,len(d('a'))):
+            _list.append(d('a').eq(i).attr('data-token'))
+        return _list
 
 def check_subtopic_data(myjson,fatherid):
     if(isinstance(myjson, dict)):
@@ -68,14 +74,14 @@ def check_subtopic_data(myjson,fatherid):
             url = 'https://www.zhihu.com/topic/'+fatherid+'/organize/entire?child='+myjson['msg'][1][10][0][2]+'&parent='+fatherid
             for i in range(0, len(myjson['msg'][1])-1):
                 grabList.append(myjson['msg'][1][i][0][2])
-            print(len(grabList))
+            print '待 ' + str(len(grabList))
             sys.stdout.flush()
             time.sleep(config.sleeptime+random.uniform(0,3))
             myjson = gct.get_subtopic_json(url,config.subtopic_values,config.subtopic_headers)
         wd.wd_temporaryData(myjson)            
         for i in range(0, len(myjson['msg'][1])):
             grabList.append(myjson['msg'][1][i][0][2])
-        print(len(grabList))
+        print '待 ' + str(len(grabList))
         sys.stdout.flush()
         return 'end'
     else:
@@ -98,21 +104,30 @@ def getonetopic(url,topicid):
     html = get_html_value(url)
     if(html!=None):
         # 获取父节点数据
-        parents_str = get_parents_str(html)
-
-        print "话题名称 ",get_topic_title(html)
-        print "话题ID ",get_topic_id(url)
-        print "话题关注人数 ",get_topic_focus(html)
-        print "父话题名称 ",get_parents_title(parents_str)
-        print "父话题ID ",get_parents_id(parents_str)
-        sys.stdout.flush()
+        _parents_str = get_parents_str(html)
         # 记录话题树数据
-        wd.wd_Data(get_topic_title(html),get_topic_id(url),get_topic_focus(html),get_parents_title(parents_str),get_parents_id(parents_str))
-
+        _title = get_topic_title(html)
+        _id = get_topic_id(url)
+        _focus = get_topic_focus(html)
+        _parentsname = get_parents_title(_parents_str)
+        _parentsid = get_parents_id(_parents_str)
+        if(isinstance(_parentsname, list)):
+            for i in range(0,len(_parentsname)):
+                wd.wd_Data(_title,_id,_focus,_parentsname[i],_parentsid[i])
+        else:
+            wd.wd_Data(_title,_id,_focus,_parentsname,_parentsid)
+        # 写入已抓取队列用于判重
+        _url = get_topic_id(url)
+        haveList[_url] = ''
+# 抓取队列
 global grabList
 grabList = []
+
 global baseUrl
 baseUrl = "https://www.zhihu.com"
+# 已抓取队列 用于判重
+global haveList
+haveList = {}
 
 def starttopictreespider():  
     initID = 19776749
@@ -126,17 +141,19 @@ def starttopictreespider():
 
     # 检查抓取队列
     while(check_topiclist()):
+        print '已 ' + str(len(haveList))
+        print '待 ' + str(len(grabList))
         initurl = baseUrl + '/topic/'+grabList[0]+'/organize/entire#anchor-children-topic'
         initID = grabList[0]
         del grabList[0]
-        print len(grabList)
-        sys.stdout.flush()
-        time.sleep(config.sleeptime+random.uniform(0,3))
-        getonetopic(initurl,initID)
-        # 获取子节点数据
-        subtopic_json = gct.get_subtopic_json(initurl,config.subtopic_values,config.subtopic_headers)
-        # 检查子节点数据
-        check_subtopic_data(subtopic_json,initID)
+        if((initID in haveList)==False):
+            sys.stdout.flush()
+            time.sleep(config.sleeptime+random.uniform(0,3))
+            getonetopic(initurl,initID)
+            # 获取子节点数据
+            subtopic_json = gct.get_subtopic_json(initurl,config.subtopic_values,config.subtopic_headers)
+            # 检查子节点数据
+            check_subtopic_data(subtopic_json,initID)
             
     print '抓取结束'
 

@@ -1,8 +1,8 @@
 #-*- coding: UTF-8 -*-
 # 临时数据文件名
-tdfn = 'temporaryData4.txt'
+tdfn = 'temporaryData.txt'
 # 数据文件名
-dfn = 'Data4.txt'
+dfn = 'Data.txt'
 sleeptime = 3
 timeout = 15
 # 主程序header
