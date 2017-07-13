@@ -4,28 +4,37 @@ import re
 from pyquery import PyQuery as pq
 import config
 import time
-from getsubtopic import Gct
+from getsubtopic import Gst
 from writedown import Wd
 import random 
 import sys
-sys.stdout.flush()
-#根话题W
+#根话题
 # url = '/topic/19776749/organize/entire'
 #可修改名称话题&&无子话题
 #有子话题
 # url = '/topic/19776751/organize/entire'
-0
 
 # 记录器
 wd = Wd(config.tdfn,config.dfn)
 # 获取子节点工具
-gct = Gct()
+gst = Gst()
 
+
+global baseUrl
+baseUrl = "https://www.zhihu.com"
+
+# 抓取队列
+global grabList
+grabList = []
+
+# 已抓取队列 用于判重
+global haveList
+haveList = {}
 
 #获取页面内容
 def get_html_value(url):
     try:
-        request = urllib2.Request(url,headers=config.mainheaders)
+        request = urllib2.Request(url,headers=config.pageheaders)
         response = urllib2.urlopen(request)
         return response.read()
     except:
@@ -66,9 +75,11 @@ def get_parents_id(parents_str):
         for i in range(0,len(d('a'))):
             _list.append(d('a').eq(i).attr('data-token'))
         return _list
-
+# 检查子话题数据
 def check_subtopic_data(myjson,fatherid):
+    # 检查数据是否正常
     if(isinstance(myjson, dict)):
+        # 子话题是否获取完毕
         while(len(myjson['msg'][1])==11):
             wd.wd_temporaryData(myjson)
             url = 'https://www.zhihu.com/topic/'+fatherid+'/organize/entire?child='+myjson['msg'][1][10][0][2]+'&parent='+fatherid
@@ -77,7 +88,8 @@ def check_subtopic_data(myjson,fatherid):
             print '待 ' + str(len(grabList))
             sys.stdout.flush()
             time.sleep(config.sleeptime+random.uniform(0,3))
-            myjson = gct.get_subtopic_json(url,config.subtopic_values,config.subtopic_headers)
+            myjson = gst.get_subtopic_json(url,config.subtopic_values,config.subtopic_headers)
+        # 子话题获取完毕后
         wd.wd_temporaryData(myjson)            
         for i in range(0, len(myjson['msg'][1])):
             grabList.append(myjson['msg'][1][i][0][2])
@@ -90,14 +102,14 @@ def check_subtopic_data(myjson,fatherid):
         sys.stdout.flush()
         time.sleep(60+random.uniform(0,3))
         return check_subtopic_data(myjson,fatherid)
-
+# 检查抓取队列
 def check_topiclist():
     if len(grabList)!=0:
         return 1
     else:
         return 0
 
-# 抓取一层话题数据
+# 获取一个话题数据
 def getonetopic(url,topicid):
     initurl = str('https://www.zhihu.com/topic/'+str(topicid)+'/organize/entire?child='+str(topicid)+'&parent='+str(topicid))
     # 获取页面
@@ -119,23 +131,16 @@ def getonetopic(url,topicid):
         # 写入已抓取队列用于判重
         _url = get_topic_id(url)
         haveList[_url] = ''
-# 抓取队列
-global grabList
-grabList = []
 
-global baseUrl
-baseUrl = "https://www.zhihu.com"
-# 已抓取队列 用于判重
-global haveList
-haveList = {}
 
+# 程序入口
 def starttopictreespider():  
     initID = 19776749
     initurl = baseUrl + '/topic/19776749/organize/entire#anchor-children-topic'
     # 获取话题数据
     getonetopic(initurl,initID)
     # 获取子话题数据
-    subtopic_json = gct.get_subtopic_json(initurl,config.subtopic_values,config.subtopic_headers)
+    subtopic_json = gst.get_subtopic_json(initurl,config.subtopic_values,config.subtopic_headers)
     # 检查子话题数据
     check_subtopic_data(subtopic_json,initID)
 
@@ -151,7 +156,7 @@ def starttopictreespider():
             time.sleep(config.sleeptime+random.uniform(0,3))
             getonetopic(initurl,initID)
             # 获取子节点数据
-            subtopic_json = gct.get_subtopic_json(initurl,config.subtopic_values,config.subtopic_headers)
+            subtopic_json = gst.get_subtopic_json(initurl,config.subtopic_values,config.subtopic_headers)
             # 检查子节点数据
             check_subtopic_data(subtopic_json,initID)
             

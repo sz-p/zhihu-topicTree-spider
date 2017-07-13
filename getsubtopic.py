@@ -8,7 +8,7 @@ import config
 from writedown import Wd
 
 wd = Wd(config.tdfn,config.dfn)
-class Gct():
+class Gst():
     def get_subtopic_json(self,url,values,headers):
         retry_time = 5
         flag = False
